@@ -7,12 +7,12 @@ Stream the SAM output of bwa mem directly through yapyap to create a report, wri
 
 Think about it, each read in a pair can have:
 
-0 alignments
-1 global alignment
-1 split alignment
-Multiple alignments all global
-Multiple alignments, mixed global and split 
-Multiple alignments, all split
+* 0 alignments
+* 1 global alignment
+* 1 split alignment
+* Multiple alignments all global
+* Multiple alignments, mixed global and split 
+* Multiple alignments, all split
 
 Mix in whether the alignments are flagged as primary and properly paired or not, and you can see that every fragment has 100s of possible fates.
 
