@@ -33,4 +33,4 @@ samtools view aligned.bam | yapyap
 
 ## Output
 
-Example output (here)[https://gist.github.com/mw55309/e3bd3632cc0febf51dc53bdc84b416e6]
+Example output [here](https://gist.github.com/mw55309/e3bd3632cc0febf51dc53bdc84b416e6)
