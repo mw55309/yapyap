@@ -1,0 +1,301 @@
+#!/usr/bin/env perl
+
+# hash to contain report
+my %report;
+
+# hashref to hold read information
+my $ref;
+
+# current read id
+my $cid = undef;
+my $last = undef;
+
+# array to hold current SAM record
+my @sam;
+
+while(<>) {
+	
+	# print header lines
+	if (m/^\@/) {
+		print;
+		next;
+	}
+
+	# current sam record as an array
+	@sam = split(/\t/);
+
+	$cid = $sam[0];
+
+	# if read if isn't the same as the last one
+	# process data for that read
+	if ($cid ne $last) {
+		&process;
+	}
+
+	# characterise the record
+	
+	# is it first or second?
+	my $record = &isfirst($sam[1]) ? "first" : "second";
+
+	# is it mapped?
+	$ref->{$record}->{'mapped'} += &ismapped($sam[1]);
+
+	# is alignment split?
+	$ref->{$record}->{'split'} += &issplit($sam[5]);
+
+	# is soft-clipped?
+	$ref->{$record}->{'softclipped'} += &issoftclipped($sam[5]);
+	
+	# is alignment marked primary?
+	$ref->{$record}->{'primary'} += &isprimary($sam[1]);
+		
+	# is properly paired
+	$ref->{$record}->{'prop'} += &isprop($sam[1]);
+
+	print join("\t", @sam);
+
+	#print "YAPYAP MAPPED:", &ismapped($sam[1]), "\n";
+
+	# set current read id
+	$last = $sam[0];
+}
+#print dec2bin(167), "\n";
+&process;
+
+foreach $key (sort {$report{$b} <=> $report{$a}} keys %report) {
+        print STDERR "YAPYAP\t", $key, "\t", $report{$key}, "\n";
+}
+
+
+sub process {
+
+	# only 
+	if (keys %{$ref}) {
+
+		my @tag;
+
+		# deal with the first read
+		if (exists $ref->{'first'}) {
+
+			my $tag = "";
+
+			# is it mapped?
+			if (exists $ref->{'first'}->{'mapped'}) {				
+
+				# is it uniquely mapped?
+				if ($ref->{'first'}->{'mapped'} == 1) {
+					$tag .= "first uniquely mapped";
+						
+					# is it primary?
+					if (exists $ref->{'first'}->{'primary'}) {
+						$tag .= " primary";						
+					} else {
+						$tag .= " not primary";
+					}
+
+					# is it split?
+					if ($ref->{'first'}->{'split'} == 1) {
+                                                $tag .= " split";
+                                        } 		
+
+					# is it soft-clipped?
+					if ($ref->{'first'}->{'softclipped'} == 1) {
+                                                $tag .= " soft-clipped";
+                                        }				
+				} elsif ($ref->{'first'}->{'mapped'} > 1) {
+					# no it is multi-mapped
+					
+					$tag .= "first multi-mapped";
+
+					# how many primaries?
+					if ($ref->{'first'}->{'primary'} == 1) {
+						$tag .= " one primary";
+
+						# is it soft-clipped?
+						if ($ref->{'first'}->{'softclipped'} == 1) {
+	                                                $tag .= " soft-clipped";
+        	                                }
+					} elsif ($ref->{'first'}->{'primary'} > 1) {
+						$tag .= " multiple primary";
+					} else {
+						$tag .= " no primary";
+					}
+
+					# how many split
+					if ($ref->{'first'}->{'split'} == 1) {
+                                                $tag .= " one split";
+                                        } elsif ($ref->{'first'}->{'split'} > 1) {
+                                                $tag .= " multiple split";
+                                        }					
+				} else {
+					$tag = "first unmapped";
+				}
+			} else {
+				$tag = "first unmapped";
+			}
+
+			push(@tag, $tag);
+		} else {
+			push(@tag, "first no record");
+		}
+
+		
+		# deal with the second read
+		if (exists $ref->{'second'}) {
+
+                        my $tag = "";
+
+                        # is it mapped?
+                        if (exists $ref->{'second'}->{'mapped'}) {
+
+                                # is it uniquely mapped?
+                                if ($ref->{'second'}->{'mapped'} == 1) {
+                                        $tag .= "second uniquely mapped";
+
+                                        # is it primary?
+                                         if (exists $ref->{'second'}->{'primary'}) {
+                                                $tag .= " primary";
+                                        } else {
+                                                $tag .= " not primary";
+                                        }
+
+                                        # is it split?
+                                        if ($ref->{'second'}->{'split'} == 1) {
+                                                $tag .= " split";
+                                        }
+
+					# is it soft-clipped
+					if ($ref->{'second'}->{'softclipped'} == 1) {
+                                                $tag .= " soft-clipped";
+                                        }
+                                } elsif ($ref->{'second'}->{'mapped'} > 1) {
+                                        # no it is multi-mapped
+                                        $tag .= "second multi-mapped";
+
+                                        # how many primaries?
+                                        if ($ref->{'second'}->{'primary'} == 1) {
+                                                $tag .= " one primary";
+						
+						# is it soft-clipped?
+						if ($ref->{'first'}->{'softclipped'} == 1) {
+                                                        $tag .= " soft-clipped";
+                                                }
+                                        } elsif ($ref->{'second'}->{'primary'} > 1) {
+                                                $tag .= " multiple primary";
+                                        } else {
+                                                $tag .= " no primary";
+                                        }
+
+                                        # how many split
+                                        if ($ref->{'second'}->{'split'} == 1) {
+                                                $tag .= " one split";
+                                        } elsif ($ref->{'second'}->{'split'} > 1) {
+                                                $tag .= " multiple split";
+                                        }
+                                } else {
+                                        $tag = "second unmapped";
+                                }
+                        } else {
+                                $tag = "second unmapped";
+                        }
+
+                        push(@tag, $tag);
+                } else {
+                        push(@tag, "second no record");
+                }
+
+		my $tags = join(";", sort @tag);
+
+		#print "$last: $tags\n";
+
+		$report{$tags}++;		
+
+		delete $ref->{'first'};
+		delete $ref->{'second'};
+		
+		$ref = undef;
+
+	}
+
+}
+
+sub issplit {
+
+	my $cigar = shift;
+
+	if ($cigar =~ m/N/) {
+		return(1);
+	} else {
+		return(0);
+	}
+
+}
+
+sub issoftclipped {
+
+        my $cigar = shift;
+
+        if ($cigar =~ m/\dS/) {
+                return(1);
+        } else {
+                return(0);
+        }
+
+}
+
+
+sub ismapped {
+
+        my $str = unpack("B32", pack("N", shift));
+
+        my @arr = split(//, $str);
+
+        if ($arr[29] == 1) {
+                return(0);
+        } else {
+                return(1);
+        }
+}
+
+sub isprop {
+
+        my $str = unpack("B32", pack("N", shift));
+
+        my @arr = split(//, $str);
+
+        if ($arr[30] == 1) {
+                return(1);
+        } else {
+                return(0);
+        }
+}
+
+
+sub isprimary {
+
+        my $str = unpack("B32", pack("N", shift));
+
+        my @arr = split(//, $str);
+
+        if ($arr[23] == 1) {
+                return(0);
+        } else {
+                return(1);
+        }
+}
+
+
+sub isfirst {
+
+	my $str = unpack("B32", pack("N", shift));
+
+	my @arr = split(//, $str);
+
+	if ($arr[25] == 1) {
+		return(1);
+	} else {
+		return(0);
+	}	
+
+}
+

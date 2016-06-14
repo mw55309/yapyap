@@ -16,3 +16,18 @@ Think about it, each read in a pair can have:
 
 Mix in whether the alignments are flagged as primary and properly paired or not, and you can see that every fragment has 100s of possible fates.
 
+## Usage
+
+### With bwa 
+
+STDOUT will be unaltered SAM, STDERR will be yapyap report
+```bash
+bwa mem -M reference.fa reads_1.fq reads_2.fq | yapyap 
+```
+
+### With samtools
+STDOUT will be unaltered SAM, STDERR will be yapyap report
+```bash
+samtools view aligned.bam | yapyap
+```
+
